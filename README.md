@@ -1,7 +1,7 @@
 RegressionModels
 ================
 
-#COURSER and Jhons Hopkins course
+#COURSERA and Johns Hopkins University course
 
 Hello,
 
@@ -17,9 +17,9 @@ This template has only two minors modifications over the original that is instal
  2. Three new lines at lines 162-163 and 164 to give to the abstract any other name as Sypnosis, Executive Summary, etc
 
 ```
-$if(abstract-title)$
-\renewcommand{\abstractname}{$abstract-title$}
-$endif$
+162 $if(abstract-title)$
+163 \renewcommand{\abstractname}{$abstract-title$}
+164 $endif$
 ```
 
 Enjoy it,
