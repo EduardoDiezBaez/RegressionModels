@@ -1,0 +1,361 @@
+---
+title: MOTOR TREND MAGAZINE
+author:  \newline{}Pleasing Gears & MPG Appearance
+date: Eduardo B. Díez --- August 2014 
+output:
+  pdf_document:
+    fig_caption: yes
+lang: spanish, american
+citecolor: magenta
+urlcolor: blue
+linkcolor: red
+documentclass: article
+geometry: margin=17mm
+papersize: A4paper, onecolumn
+fontsize: 12pt
+abstract-title: Executive Summary
+abstract: |
+    The debate about the manual or automatic transmissions is open. However, findings sponsored by MOTOR TREND MAGAZINE will help us to make better decisions about whether to use vehicles with manual gearboxes, pleasing for everyone loving the motor sport, as is customary in Europe or automatic transmissions as is usually done in America.
+    
+    Although the findings of our study are not definitive yet, they indicate that vehicles with automatic transmissions ---versus manual version--- travel, in round numbers, 3 miles less per gallon of fuel that all of us have to pay from our own pockets. This has  surely a considerable impact on the battered economies of many families in our country.
+    
+    Finally, and wonderfully, abandoning those bland automatic transmissions by the use of manual gearboxes, not only we become into coherent lovers ---of the four wheels--- but additionally we'll reduce harmful emission and  help preserve our planet for future generations.
+    
+    \vspace{5mm}\raggedleft{} \scriptsize "___. . . Essentially, all models are wrong, but some are useful.___"
+    
+    ___George Box___
+
+---
+
+```{r Default, echo=FALSE, message=FALSE, warning=FALSE}
+
+curpar <- par()                     # to restore at the end
+
+# set the default working directory
+curdir <- getwd()                   # to restore at the end too
+workingdirectory <- "D:/Cursos/Hopkin/7-AR-Regression Models/Project"
+setwd(workingdirectory)
+
+library(datasets)                    # contain the dataset to use "mtcars"
+library(knitr)                       # to compile this doc as html or pdf or (...)
+library(xtable)                      # to include tables in html and LaTeX
+require(gtable)                      # to scale down the tables in LaTeX
+
+###### 
+# my function to add the ci to the summary table with the desire significance
+#
+tableci <- function(lm.output, alpha=0.05){
+  
+  tmp_table <- coef(summary(lm.output))
+  tmp_table <- cbind(tmp_table, 
+                     confint(lm.output, level=(1-alpha))[,1], 
+                     confint(lm.output, level=(1-alpha))[,2])
+  colnames(tmp_table)[dim(tmp_table)[2]-1] <- paste("ci: ",
+                                                    round(100*alpha/2,1), 
+                                                    "%", 
+                                                    sep="" )
+  colnames(tmp_table)[dim(tmp_table)[2]] <- paste("ci: ",
+                                                  round(100*(1-alpha/2),1), 
+                                                  "%", 
+                                                  sep="")
+
+  return(tmp_table)
+}
+######
+
+info <- sessionInfo()
+```
+
+**We'll give clear and concise** answers to determine if an automatic transmission is better than a manual one to get more miles per gallon of fuel and whether there is any difference between the two types, what is that amount. 
+
+All analyses were performed using _`r  R.version.string`_[^1] and _RStudio_[^4] as IDE, with the default  base packages _`r info$base`_ and additionally to produce this report in PDF the packages _xtable_[^2], _gtable_[^6] and _knitr_[^3]. 
+
+[^1]: R Core Team (2014). _R: A language and environment for statistical computing_. [Computer software]. R Foundation for Statistical Computing, Vienna, Austria. URL <http://www.R-project.org/>.
+  
+[^2]: David B. Dahl (2014). _xtable: Export tables to LaTeX or HTML_. R package version 1.7-3. <http://CRAN.R-project.org/package=xtable>.
+
+[^3]: Yihui Xie (2014) _knitr: A Comprehensive Tool for Reproducible Research in R_. R package version 1.6. In Victoria Stodden, Friedrich Leisch and Roger D. Peng, editors, Implementing Reproducible Computational Research. Chapman and Hall/CRC. ISBN 978-1466561595
+
+[^4]: 2009-2013 RStudio, Inc. _RStudio: Integrated development environment for R_. (Version  0.98.978). [Computer software]. Boston, MA. Retrieved May 20, 2012. <http://www.rstudio.org/>.
+ 
+[^6]: Hadley Wickham (2012). _gtable: Arrange grobs in tables._ R package version 0.1.2. http://CRAN.R-project.org/package=gtable
+
+**To find a feasible regression** model on the basis of the data available `mtcars` we made on it one change concerning with the variable --predictor-- of interest `am`, which was used to create a new variable. The new predictor ---`Automa.Trans`--- will be used in the regression model instead of the original am. `Automa.Trans` results in the inverse binary copy of `am` where the value `1` means  automatic gearbox/transmission and `0` if not. This way the results are easiest to be interpreted, even that the new variable it's really the same as the original but binary negate. Also we're going to stepwise through the candidate predictors with a **backward elimination p-value strategy**[^5].
+
+
+[^5]: Diez, David M, Christopher D Barr, and Mine Çetinkaya-Rundel. "Introduction to Linear Regression,"  p 361. In _OpenIntro Statistics_, Second Edition, 2013. <http://www.openintro.org/stat/textbook.php>.
+
+```{r MyFit, echo=FALSE, results='hide'}
+
+data(mtcars)
+Automa.Trans <- mtcars$am
+
+i<-as.integer()
+for ( i in 1:length(Automa.Trans) ) 
+  {
+  if( mtcars$am[i] == 0 ) Automa.Trans[i]<-1 else Automa.Trans[i]<-0
+  }
+
+mtcars$Automa.Trans <- Automa.Trans
+
+modelDB <- mtcars
+modelDB$am <- NULL
+
+myfit <- step(lm(mpg ~ ., data=modelDB), direction="backward")
+
+```
+
+So we started with a model described with the formula: $$mpg \sim cyl + disp + hp + drat + wt + qsec + vs + gear + carb + Automa.Trans$$ and after performing the parsimonious backward method, the model was reduce as the table 1 shows.  
+
+```{r AICtable, results='asis', echo=FALSE}
+
+TableCaption1 = "The Akaike's Information Criterion (AIC) for the backward parsimonious model where the smaller the AIC, the better the fit. (See: Sakamoto, Y., Ishiguro, M., and Kitagawa G. (1986). \\textit{Akaike Information Criterion Statistics}. D. Reidel Publishing Company.)"
+
+# typography scale
+#Le Corbusier
+#1.6154, 1.307, 1, 0.8077, 0.6154
+#Traditional
+#1.333, 1.1667, 1, 0.9167, 0.8333, .75
+
+trashcan <- print(xtable(myfit$anova, 
+                         caption=TableCaption1, 
+                         ), 
+                  type='latex',
+                  booktabs=TRUE,
+                  comment = FALSE,
+                  scalebox=0.8333,
+                  print.results = TRUE,
+                  floating=TRUE
+                  )
+
+```
+
+Finally, we obtained a regression model that explains roughly `r round(summary(myfit)$adj.r.square*100, 0)`% of the total variance of the response variable ---`mpg`--- and leaving the rest `r round((1-summary(myfit)$adj.r.square)*100, 0)`% to be explained by residual variance. The  coefficients can be found in table 2, with R^2^~adj~ = `r summary(myfit)$adj.r.square` and df = `r summary(myfit)$fstat[3]`.
+
+```{r ModelTable, results='asis', echo=FALSE}
+
+#bktbs <- tableci(myfit, 0.05)
+#hlines <- c(-1,0,0,nrow(bktbs))
+
+TableCaption2 = "Summary of the regression with the addition of confidence intervals."
+trashcan <- print(xtable(tableci(myfit, 0.05), 
+                         caption=TableCaption2, 
+                         digits=c(2,2,2,2,4,2,2),
+                         align="rrrrccc"
+                         ), 
+                  type='latex',
+                  booktabs=TRUE,
+                  comment = FALSE,
+                  scalebox=0.8333,
+                  #hline.after = hlines,
+                  print.results = TRUE,
+                  floating=TRUE
+                  )
+
+```
+
+**The data provide convincing** evidence that all  $\beta_{i}$  are significantly different than 0, so the explanatory variables ---`wt, qsec` and `Auto.Trans`--- are significant predictors of the response variable ---`mpg`. With a significance level of $\alpha$ = 0.05 we reject H~0~: $\beta_{i} = 0$ favoring H~A~: $\beta_{i} \neq 0$. Also, we are 95% confident that all $\beta_{i}$  fall inside the indicated endpoints of their confidence interval. 
+
+Thus, we are 95% confident that $mpg \sim wt + qsec + Automa.Trans$  predicts,  all else being equal, that the vehicles equipped with automatic gearboxes travel on average **2.94 miles less** per each gallon of fuel than the vehicles equipped with gearboxes that aren't automatics.
+
+**A fast diagnostic of our model** starts by looking at the residuals vs fitted plot ---$e \sim \hat{y}$ allows for considering the entire model with all explanatory variables at once--- that indicates a fail in the homoscedasticity, because ---in our case--- the variability of points ---residuals--- around the 0 line ---the least squares line--- should be roughly constant but the points seem to get more distanced from the 0 line as the abscissa value ---predicted value--- increases. So, seems to be a lack in the condition of _constant variability of residuals_. Also, the condition of _nearly normal residuals with mean 0_, by using the normal Q-Q plot seems with anomalous points in both extremes. 
+
+Both situations may be due to weaknesses in the data. A priori, given the extensive amount of variety of technical specifications in vehicles, seems to us very limited to find strong conclusions about the issue by using only 32 cases. Consequently, we should consider our finds as provisional until a deeper study can be realized to fulfill the necessities about the variability and the normality of residuals.
+
+\twocolumn
+
+## Appendix
+
+Now follows a series of plot resulting from the initial exploration, and the last one, corresponds with the final obtained model. All images has a capstone with a try explanation.  
+
+```{r Start, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE}
+
+# define a palette gently with colorblind people
+Gray = "#999999"
+Orange = "#E69F00"
+SkyBlue = "#56B4E9"
+BluishGreen = "#009E73"
+Yellow = "#F0E442"
+Blue = "#0072B2"
+Vermillon = "#D55E00"
+RedddishPurple = "#CC79A7"
+GrayGGplot ="#E5E5E5"
+SalmonWSJ = "#F8F2E4"
+
+# define some minimum for the chunks
+opts_chunk$set(dpi=300, fig.path='img/', error=FALSE, warning=FALSE, message=FALSE)
+
+# start the exploratory analysis of the data
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("Automatic", 
+                       "Manual")
+
+# make a copy so we can add and change up to us (...)
+mydata <- mtcars
+
+# transform in factor all those variable that inittial should be cathegories
+mydata$vs <- as.factor(mydata$vs)
+levels(mydata$vs) <- c("V.engine", 
+                       "S.engine")
+#
+mydata$carb <- as.factor(mydata$carb)
+levels(mydata$carb) <- c("OneBarrel", 
+                         "TwoBarrel", 
+                         "ThreeBarrel", 
+                         "FourBarrel", 
+                         "SixBarrel", 
+                         "EightBarrel")
+#
+mydata$gear <- as.factor(mydata$gear)
+levels(mydata$gear) <- c("3Gears", 
+                         "4Gears", 
+                         "5Gears")
+
+```
+
+```{r segundo, fig.show='hold', fig.height=3, fig.width=7, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.cap="The plot shows that number of cylinders and  gearbox type are both variable predictors associated ---negatively--- with the mpg response."}
+
+# let's check for cylinders amount
+am4 <- subset(mydata, mydata$cyl == 4)
+am6 <- subset(mydata, mydata$cyl == 6)
+am8 <- subset(mydata, mydata$cyl == 8)
+
+par(mfrow=c(1,3))
+par(bg=SalmonWSJ)
+
+yaxislim=range(mydata$mpg)
+
+boxplot(am4$mpg ~ am4$am, ylim=yaxislim,
+        ylab="MGP (Millages per gallon)",
+        main="\n\n4 cilinders",  col=(c(Yellow, SkyBlue)))
+boxplot(am6$mpg ~ am6$am, ylim=yaxislim, main=paste("MPG by \nGearbox type & cilinders","\n6 cilinders"), col=(c(Yellow, SkyBlue)))
+boxplot(am8$mpg ~ am8$am, ylim=yaxislim, main="\n\n8 cilinders", col=(c(Yellow, SkyBlue)))
+
+# Yes, it seems that the cylinders number matter.
+# inspection of the boxes indicate us to use those synergies
+# so, we add the deconstruction to the dataset because maybe it is used at the end
+# when we'll make the final parsimony model.
+#
+mydata$cyl <- as.factor(mydata$cyl)
+levels(mydata$cyl) <- c("4cyl","6cyl","8cyl")
+
+```
+
+```{r tercero,  fig.show='asis', fig.height=8, fig.width=8, echo=FALSE, fig.cap="We can see the regression line how follows the scatters point but, also those point seems to follow a second degree curve."}
+
+# let's check what going on with horsepower (...)
+fit_hp <- lm(mpg ~ hp, mtcars)
+
+par(bg=SalmonWSJ)
+plot(mpg ~ hp, data=mydata, col= RedddishPurple)
+grid()
+
+a<- paste( "lm(mpg ~ hp) =>", 
+           "adj.R-squared:", round(summary(fit_hp)$adj.r.square,4), 
+           "and df =", fit_hp$df.residual, 
+           sep=" ")
+
+title(a, col.main = Vermillon)
+
+datatmp<-mydata[order(mydata$hp),]
+x <- datatmp$hp
+y <- datatmp$mpgy4
+abline(fit_hp, lwd = 3, col= Vermillon)
+
+```
+
+```{r cuarto,  fig.show='asis', dpi=300 , fig.height=8, fig.width=8, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.cap="Constructing a second order model we can see the the curve fits better the points also, the adj R-square has improved markedly"}
+
+# the scatter plot looks like a curve distribution (square curve)
+# let's construct a second order factor
+hp2 <- mydata$hp*mydata$hp 
+fit_hp2 <- lm(mpg ~ hp + hp2, mydata)
+
+par(bg=SalmonWSJ)
+
+plot(mpg ~ hp, data=mydata, col= RedddishPurple)
+grid()
+
+a<- paste( "lm(mpg ~ hp + hp^2) =>",
+           "adj.R-squared:", round(summary(fit_hp2)$adj.r.square,4), 
+           "and df =", fit_hp2$df.residual, 
+           sep=" ")
+
+b<- paste( "lm(mpg ~ hp) =>", 
+           "adj.R-squared:", round(summary(fit_hp)$adj.r.square,4), 
+           "and df =", fit_hp$df.residual, 
+           sep=" ")
+b <- paste("\n", "\n", b)
+
+title(a, col.main = Blue)
+title(b, col.main = Vermillon)
+
+mydata$mpgy4 <- rep(0,dim(mydata)[1])
+x <- mydata$hp
+y <- fit_hp2$coef[1] + fit_hp2$coef[2]*x +  fit_hp2$coef[3]*x^2
+mydata$mpgy4 <- y
+
+datatmp<-mydata[order(mydata$hp),]
+x <- datatmp$hp
+y <- datatmp$mpgy4
+
+abline(fit_hp, lwd = 3, col= Vermillon)
+lines(x, y, lwd = 3, col= Blue) 
+
+# Yes, so let's add it to the dataset and we can delete
+# de mpgy4 temporal variable
+mydata <- mydata[, -mydata$mpgy4]    # another way: mydata$mpgy4 <- NULL  
+mydata$hp2 <- hp2 
+
+```
+
+```{r quinto, fig.show='asis', dpi=300 , fig.height=8, fig.width=8, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.cap="The predictor qsec, the time the vehicle is capable to travel 1/4 of milles as fast as possible, is a good indicator of all the technical variables as one and also, the final model has this predictor and  wt additional to the gearbox"}
+
+# let's watch the qsec history (...)
+fit_qsec <- lm(mpg ~ qsec, data=mydata)
+
+par(bg=SalmonWSJ)
+
+plot(mpg ~ qsec, data=mydata)
+abline(fit_qsec, lwd = 3, col= BluishGreen)
+
+a<- paste( "lm(mpg ~ qsec) =>", 
+           "adj.R-squared:", round(summary(fit_qsec)$adj.r.square,4), 
+           "and df =", fit_qsec$df.residual, 
+           sep=" ")
+title(a, col.main = BluishGreen)
+
+```
+
+\onecolumn
+
+```{r Global, fig.show='hold', dpi=300 , fig.height=9, fig.width=9, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.cap=" \\label{fig1} Scatterplot is a graphical technique to present two numerical variables simultaneously. Such plots permit the relationship between the variables to be examined with ease. We note, at the very first row starting with the variable `mpg`, that there is an apparent negative association between `mpg` and the variables `cyl, disp, hp, carb, wt` and `Automa.Trans` while it seems a positive relation with the variables `qsec, drat, vs` and `gear`. With the former set of predictors, the response `mpg` goes down ---decrease--- with any increase in the value of each predictor ---giving less miles per gallon--- while it happens the opposite with the latter set, where any increase in the value of the predictors produce an increase in the value of the response ---giving more miles per gallon. We should state that a V-motor is less than an S-motor for our study and the rest of predictors should be trivial in the amounts, so, a carburetor with 2 chambers is less than a carburetor with 8 chambers."}
+
+par(bg=SalmonWSJ)
+pairs(~ mpg + cyl + disp + hp + carb + wt + Automa.Trans +
+      qsec + drat + vs + gear,
+      data = mydata, col = c(Blue),
+      panel = panel.smooth,
+      main = "Looking like a Bird")
+
+```
+
+```{r sexto,  dpi=300 , fig.height=10, fig.width=10, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.cap="The result of the regression is inspectable graphically. The plot of the second row and the second column indicates that the outliers have Cook's distances less than unity so that we need not worry about them. Our major concerns, in this case, are coming from the two plots from the first row. The first picture shows what is called `fan pattern`, where the residuals are not uniformly distributed but as the fitted values increase, the difference between the observed and predicted increase their value of separation to the axis of abscissae. The second plot shows, at both ends, that values are distanced away from the reference line corresponding to the normal distribution. From what we observed in both plots, there is not normal residues nor evenly distributed."}
+
+par(mfrow=c(2,2))
+par(bg=SalmonWSJ)
+
+plot(myfit)
+
+```
+
+
+```{r GoodBye, echo=FALSE, message=FALSE, warning=FALSE}
+
+par(curpar)                     # to restore at the end
+
+# set the default working directory
+setwd(curdir)                   # to restore at the end too
+
+```
+

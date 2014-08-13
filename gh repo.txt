@@ -1,0 +1,16 @@
+git clone https://github.com/EduardoDiezBaez/machineries.git
+cd machineries
+git checkout --orphan gh-pages
+git rm -rf .
+rm '.gitignore'
+echo "My GitHub Page" > index.html
+git add index.html
+git commit -a -m "First pages commit"
+git push origin gh-pages
+
+the url is working
+http://EduardoDiezBaez.github.io/machineries
+
+
+
+
